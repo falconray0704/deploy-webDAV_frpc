@@ -1,0 +1,50 @@
+version: '3.6'
+services:
+  nginxwebdav:
+    image: docker-nginx-webdav-nononsense-nginxwebdav:latest
+    container_name: "${WEBDAV_SERVER_NAME:-nginxWebDAV}"
+    environment:
+      - PUID=1000
+      - PGID=1000
+        #      - TZ=Asia/Shanghai
+      - WEBDAV_USERNAME=${WEBDAV_USERNAME:-user}
+      - WEBDAV_PASSWORD=${WEBDAV_PASSWORD:-password}
+      - SERVER_NAMES=${SERVER_NAMES:-localhost}
+      - TIMEOUTS_S=3600 # these are seconds
+      - CLIENT_MAX_BODY_SIZE=0 # must end with M(egabytes) or G(igabytes)
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - ${INSTALL_ROOT_PATH}/${SERVER_NAME}/${WEBDAV_DATAS_DIR}/data:/data
+      - ${INSTALL_ROOT_PATH}/${SERVER_NAME}/${WEBDAV_DATAS_DIR}/config:/config
+      # - ./custom-cont-init.d:/custom-cont-init.d # optional: additional cont-init.d-scripts like multi-user support
+    networks:
+      - frpc_webDAV
+    ports:
+      - 5080:80
+    restart: unless-stopped
+
+  frpc:
+    image: "rayruan/amd64_frp:${FRP_IMAGE_TAG:-0.60.0}"
+    container_name: "${SERVER_NAME}"
+    depends_on:
+    - nginxwebdav
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - ${INSTALL_ROOT_PATH}/${SERVER_NAME}/${CFGS_DIR}/frpc.toml:/etc/frp/frpc.toml:ro
+      - ${INSTALL_ROOT_PATH}/${SERVER_NAME}/frpc_entrypoint.sh:/app/frpc_entrypoint.sh:ro
+      - ${INSTALL_ROOT_PATH}/${SERVER_NAME}/${CERTS_DIR}/client.crt:/client.crt:ro
+      - ${INSTALL_ROOT_PATH}/${SERVER_NAME}/${CERTS_DIR}/client.key:/client.key:ro
+      - ${INSTALL_ROOT_PATH}/${SERVER_NAME}/${CERTS_DIR}/rootCA.crt:/ca.crt:ro
+    networks:
+      - frpc_webDAV
+    entrypoint: /app/frpc_entrypoint.sh
+    restart: always
+   
+networks:
+  frpc_webDAV:
+    name: "${SERVER_NAME}"

@@ -1,0 +1,21 @@
+version: '3.6'
+services:
+  frpc:
+    image: rayruan/amd64_frp_socat:${FRP_IMAGE_TAG:-latest}
+    container_name: "${SERVER_NAME}"
+    environment:
+      PUID: 1000
+      PGID: 1000
+    ports:
+      - "5080:5080"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - ${INSTALL_ROOT_PATH}/${SERVER_NAME}/${CFGS_DIR}/frpc_stcp_visitor.toml:/etc/frp/frpc.toml:ro
+      - ${INSTALL_ROOT_PATH}/${SERVER_NAME}/frpc_entrypoint.sh:/app/frpc_entrypoint.sh:ro
+      - ${INSTALL_ROOT_PATH}/${SERVER_NAME}/${CERTS_DIR}/client.crt:/client.crt:ro
+      - ${INSTALL_ROOT_PATH}/${SERVER_NAME}/${CERTS_DIR}/client.key:/client.key:ro
+      - ${INSTALL_ROOT_PATH}/${SERVER_NAME}/${CERTS_DIR}/rootCA.crt:/ca.crt:ro
+    entrypoint: /app/frpc_entrypoint.sh
+    restart: always
+
